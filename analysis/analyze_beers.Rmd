@@ -12,8 +12,14 @@ knitr::read_chunk("chunks.R")
 ```
 
 <!-- Update knitr chunk options -->
-```{r knitr-opts-chunk, include=FALSE}
+```{r knitr-opts-chunk, include=TRUE}
 ```
+
+```{r package_options, include=FALSE}
+  knitr::opts_chunk$set(fig.width=6, fig.height=3.5,
+               echo=FALSE, warning=FALSE, message=FALSE)
+```
+
 
 <!-- Insert the date the file was last updated -->
 ```{r last-updated, echo=FALSE, results='asis'}
@@ -24,7 +30,399 @@ knitr::read_chunk("chunks.R")
 ```{r code-version, echo=FALSE, results='asis'}
 ```
 
-<!-- Add your analysis here -->
+The code below loads and analyzes the Burge Lab 2018 Porter Tasting Night Results
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(broom)
+library(ggplot2)
+library(ggrepel)
+library(RColorBrewer)
+library(cowplot)
+
+t= read.table("../data/BurgeLabBeer.tsv", header=T, sep="\t")
+t_inf=read.table("../data/info.tsv", header=T, sep="\t")
+
+t_format=t %>% gather(key="key", 
+					  value="value", 
+					  -Timestamp, 
+					  -Email.Address, 
+					  -Name, 
+					  -Lab, 
+					  -Position, 
+					  -Age, 
+					  -Sex, 
+					  -home) %>%
+				separate(key, c("attribute", "beer")) %>%
+				mutate(beer=as.numeric(beer))
+			
+t_format = inner_join(t_format, t_inf, by="beer")
+t_format = t_format %>% 
+            mutate(beer_name = paste(Brewery, "\n", beer_name, " (", beer, ")", sep=""))
+```
+
+# OverallPreferences Among Beers
+## Taste
+```{r}
+colors=c("black",brewer.pal(2,"Set1"))
+
+g1=ggplot(t_format %>% filter(attribute %in% c("taste")))
+g1=g1+stat_summary(aes(x=reorder(beer_name, value), 
+                   y = value, 
+                   color=(beer %in% c(1,5))), 
+               fun.data = mean_se)+
+	theme_classic(base_size=18)+
+	scale_x_discrete("")+
+	scale_y_continuous("Taste")+
+	coord_flip(ylim=c(1,5))+
+  theme(legend.position="none")+
+  scale_color_manual(values=colors)+
+  theme(axis.text.y=element_text(size=8))
+
+g2=ggplot(t_format %>% filter(attribute %in% c("taste")))
+g2=g2+geom_histogram(aes(x=value),
+                 bins=5,
+                 color='black')+
+	theme_classic(base_size=18)+
+  scale_y_continuous("")+
+  scale_x_continuous("")
+cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
+```
+
+## Aroma
+```{r}
+
+g1=ggplot(t_format %>% filter(attribute %in% c("Aroma")))
+g1=g1+stat_summary(aes(x=reorder(beer_name, value), 
+                   y = value, 
+                   color=(beer %in% c(1,5))), 
+               fun.data = mean_se)+
+	theme_classic(base_size=18)+
+	scale_x_discrete("")+
+	scale_y_continuous("Aroma")+
+	coord_flip(ylim=c(1,5))+
+  theme(legend.position="none")+
+  scale_color_manual(values=colors)+
+  theme(axis.text.y=element_text(size=8))
+
+g2=ggplot(t_format %>% filter(attribute %in% c("Aroma")))
+g2=g2+geom_histogram(aes(x=value),
+                 bins=5,
+                 color='black')+
+	theme_classic(base_size=18)+
+  scale_y_continuous("")+
+  scale_x_continuous("")
+cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
+```
+
+## Mouth Feel
+```{r}
+
+g1=ggplot(t_format %>% filter(attribute %in% c("MF")))
+g1=g1+stat_summary(aes(x=reorder(beer_name, value), 
+                   y = value, 
+                   color=(beer %in% c(1,5))), 
+               fun.data = mean_se)+
+	theme_classic(base_size=18)+
+	scale_x_discrete("")+
+	scale_y_continuous("Mouth Feel")+
+	coord_flip(ylim=c(1,5))+
+  theme(legend.position="none")+
+  scale_color_manual(values=colors)+
+  theme(axis.text.y=element_text(size=8))
+
+g2=ggplot(t_format %>% filter(attribute %in% c("MF")))
+g2=g2+geom_histogram(aes(x=value),
+                 bins=5,
+                 color='black')+
+	theme_classic(base_size=18)+
+  scale_y_continuous("")+
+  scale_x_continuous("")
+cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
+
+```
+
+## Taste, Aroma, Mouth Feel Correlations
+```{r fig.width=9,fig.height=3}
+
+sum_t = t_format %>% 
+      group_by(attribute, beer, beer_name) %>%
+      summarize(mu=mean(value), sd = sd(value)/sqrt(n())) %>%
+      gather(key=estimator, value=value, -attribute, -beer, -beer_name) %>%
+      mutate(attribute_est=paste(attribute,estimator,sep="_")) %>%
+      ungroup() %>%
+      select(attribute_est,value,beer, beer_name) %>%
+      spread(key=attribute_est,value=value)
+
+g1=ggplot(sum_t)
+g1=g1+geom_point(aes(x=taste_mu,y=Aroma_mu))+
+  geom_segment(aes(x=taste_mu-taste_sd,
+                   xend=taste_mu+taste_sd,
+                   y=Aroma_mu,
+                   yend=Aroma_mu))+
+  geom_segment(aes(x=taste_mu,
+                   xend=taste_mu,
+                   y=Aroma_mu-Aroma_sd,
+                   yend=Aroma_mu+Aroma_sd))+
+  geom_smooth(aes(x=taste_mu,y=Aroma_mu),method='lm',alpha=0,color='darkblue')+
+    theme_classic()+
+  scale_x_continuous("Taste")+
+  scale_y_continuous("Aroma")+
+  coord_cartesian(ylim=c(1,5), 
+                  xlim=c(1,5))
+
+g2=ggplot(sum_t)
+g2=g2+geom_point(aes(x=taste_mu,y=MF_mu))+
+  geom_segment(aes(x=taste_mu-taste_sd,
+                   xend=taste_mu+taste_sd,
+                   y=MF_mu,
+                   yend=MF_mu))+
+  geom_segment(aes(x=taste_mu,
+                   xend=taste_mu,
+                   y=MF_mu-MF_sd,
+                   yend=MF_mu+MF_sd))+
+  geom_smooth(aes(x=taste_mu,y=MF_mu),method='lm',alpha=0,color='darkblue')+
+    theme_classic()+
+  scale_x_continuous("Taste")+
+  scale_y_continuous("Mouth Feel")+
+  coord_cartesian(ylim=c(1,5), 
+                  xlim=c(1,5))
+
+
+g3=ggplot(sum_t)
+g3=g3+geom_point(aes(x=Aroma_mu,y=MF_mu))+
+  geom_segment(aes(x=Aroma_mu-Aroma_sd,
+                   xend=Aroma_mu+Aroma_sd,
+                   y=MF_mu,
+                   yend=MF_mu))+
+  geom_segment(aes(x=Aroma_mu,
+                   xend=Aroma_mu,
+                   y=MF_mu-MF_sd,
+                   yend=MF_mu+MF_sd))+
+  geom_smooth(aes(x=Aroma_mu,y=MF_mu),method='lm',alpha=0,color='darkblue')+
+    theme_classic()+
+  scale_x_continuous("Aroma")+
+  scale_y_continuous("Mouth Feel")+
+  coord_cartesian(ylim=c(1,5), 
+                  xlim=c(1,5))
+
+
+plot_grid(g1,g2,g3,rel_widths=c(.3,.3,.3), ncol=3, nrow=1)
+
+
+```
+
+## ABV vs Taste
+```{r fig.width=3,fig.height=3}
+
+g=ggplot(sum_t)
+g=g+geom_point(aes(y=taste_mu,x=ABV_mu))+
+  geom_segment(aes(y=taste_mu-taste_sd,
+                   yend=taste_mu+taste_sd,
+                   x=ABV_mu,
+                   xend=ABV_mu))+
+  geom_segment(aes(y=taste_mu,
+                   yend=taste_mu,
+                   x=ABV_mu-ABV_sd,
+                   xend=ABV_mu+ABV_sd))+
+  geom_smooth(aes(y=taste_mu,x=ABV_mu),method='lm',alpha=0,color='darkblue')+
+    theme_classic()+
+  scale_x_continuous("ABV")+
+  scale_y_continuous("Taste")+
+  coord_cartesian(ylim=c(1,5))
+g
+```	
+
+
+t_sum = t_format %>% 
+		group_by(Sex,attribute, beer_name) %>%
+		summarize(mu = mean(value)) %>%
+		group_by(beer_name, attribute) %>%
+		mutate(min_val=min(mu))
+
+t_sum_line = t_sum %>% 
+				spread(key=Sex, value=mu) %>%
+				mutate(sex_col=ifelse(Female>Male,"Female","Male"))
+
+g=ggplot(t_sum %>% filter(attribute %in% c("taste")))
+g+geom_segment(aes(y=Male, 
+				 yend=Female, 
+				 x=reorder(beer_name, min_val), 
+				 xend=reorder(beer_name, min_val),
+				 color=sex_col), 
+			   data=t_sum_line %>% filter(attribute %in% c("taste")), 
+			   size=1.2)+
+	stat_summary(aes(x=reorder(beer_name, 
+							   min_val), 
+				 y = mu, 
+				 color=Sex), 
+				 fun.y=mean, 
+				 geom="point",
+				 size=2)+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	coord_cartesian(ylim=c(1,5))+
+	scale_x_discrete("")+
+	coord_flip()
+
+g=ggplot(t_format %>% filter(attribute %in% c("Aroma")))
+g+stat_summary(aes(x=reorder(beer_name, value), y = value))+
+	theme_classic()+
+	scale_x_discrete("")+
+	scale_y_continuous("Aroma")+
+	coord_flip(ylim=c(1,5))
+
+g=ggplot(t_sum %>% filter(attribute %in% c("Aroma")))
+g+geom_segment(aes(y=Male, 
+				 yend=Female, 
+				 x=reorder(beer_name, min_val), 
+				 xend=reorder(beer_name, min_val),
+				 color=sex_col), 
+			   data=t_sum_line %>% filter(attribute %in% c("Aroma")), 
+			   size=1.2)+
+	stat_summary(aes(x=reorder(beer_name, 
+							   min_val), 
+				 y = mu, 
+				 color=Sex), 
+				 fun.y=mean, 
+				 geom="point",
+				 size=2)+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	coord_cartesian(ylim=c(1,5))+
+	scale_x_discrete("")+
+	coord_flip()
+
+
+g=ggplot(t_format %>% filter(attribute %in% c("MF")))
+g+stat_summary(aes(x=reorder(beer_name, value), y = value))+
+	theme_classic()+
+	scale_x_discrete("")+
+	scale_y_continuous("Mouth Feel")+	
+	coord_flip(ylim=c(1,5))
+
+g=ggplot(t_sum %>% filter(attribute %in% c("MF")))
+g+geom_segment(aes(y=Male, 
+				 yend=Female, 
+				 x=reorder(beer_name, min_val), 
+				 xend=reorder(beer_name, min_val),
+				 color=sex_col), 
+			   data=t_sum_line %>% filter(attribute %in% c("MF")), 
+			   size=1.2)+
+	stat_summary(aes(x=reorder(beer_name, 
+							   min_val), 
+				 y = mu, 
+				 color=Sex), 
+				 fun.y=mean, 
+				 geom="point",
+				 size=2)+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	coord_cartesian(ylim=c(1,5))+
+	scale_x_discrete("")+
+	coord_flip()
+
+
+t_sum = t_format
+t_format$BAscore
+g=ggplot(t_format %>% filter(attribute %in% c("taste")))
+g+stat_summary(aes(x=BAscore, y = value, color=attribute, group=beer))+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	scale_x_continuous("Beer Advocate Score")+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+
+g=ggplot(t_format %>% filter(attribute %in% c("taste")))
+g+stat_summary(aes(x=ABV, y = value, color=attribute, group=beer))+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	scale_x_continuous("ABV")
+
+
+g=ggplot(t_format %>% filter(attribute %in% c("ABV")))
+g+stat_summary(aes(x=ABV, y = value, color=attribute, group=beer))+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	geom_abline(slope=1, intercept=0)+
+	coord_cartesian(ylim=c(0,13), xlim=c(0,13))
+	
+g=ggplot(t_format %>% filter(attribute %in% c("ABV")))
+g+stat_summary(aes(x=ABV, y = value, color=Sex, group=interaction(beer,Sex)))+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	geom_abline(slope=1, intercept=0)+
+	coord_cartesian(ylim=c(0,13), xlim=c(0,13))
+	
+g=ggplot(t_format %>% filter(attribute %in% c("ABV")) %>% filter(Lab %in% c("Burge", "Li")))
+g+stat_summary(aes(x=ABV, y = value, color=Lab, group=interaction(beer,Lab)))+
+	theme_classic()+
+	scale_color_brewer(palette="Set2")+
+	geom_abline(slope=1, intercept=0)+
+	coord_cartesian(ylim=c(0,13), xlim=c(0,13))
+	
+
+lab_sum = t_format %>% filter(Lab %in% c("Burge", "Li")) %>%
+	group_by(Lab, attribute, beer) %>%
+	summarize(mu = mean(value), sd = sd(value)) %>%
+	mutate(lab_attribute = interaction(Lab, attribute)) %>%
+	ungroup() %>%
+	select(lab_attribute, mu, beer)
+
+spread_data = lab_sum %>% spread(key=lab_attribute, value=mu)
+
+##Beers Li lab liked, we didn't
+g=ggplot(spread_data)
+g+geom_point(aes(x=Burge.taste, y=Li.taste))+
+	geom_text_repel(aes(x=Burge.taste, y=Li.taste, label=beer))+
+	theme_classic()+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))+
+	geom_abline(slope=1,intersect=0)
+	
+	##
+
+g=ggplot(spread_data)
+g+geom_point(aes(x=Burge.Aroma, y=Li.Aroma))+
+	theme_classic()+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+
+g=ggplot(spread_data)
+g+geom_point(aes(x=Burge.MF, y=Li.MF))+
+	theme_classic()+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+
+g=ggplot(spread_data)
+g+geom_point(aes(x=Li.taste, y=Li.MF))+
+	theme_classic()+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+
+g=ggplot(spread_data)
+g+geom_point(aes(x=Li.taste, y=Li.Aroma))+
+	theme_classic()+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+
+g=ggplot(spread_data)
+g+geom_point(aes(x=Li.MF, y=Li.Aroma))+
+	theme_classic()+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+
+
+Li
+
+
+### Fix so just Burge and Li
+### compare 
+
+## compare Burge v li
+	
+	
+	
+	
+	
+	
+	
+	
+
 
 ## Session information
 
