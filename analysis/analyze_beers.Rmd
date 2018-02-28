@@ -3,13 +3,13 @@ title: "Analysis of Burge Lab Porter Tasting"
 author: "Peter Sudmant"
 date: '2018-02-27'
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 <!-- The file analysis/chunks.R contains chunks that define default settings
 shared across the workflowr files. -->
-```{r read-chunk, include=FALSE, cache=FALSE}
+```{r read-chunk, include=TRUE, cache=FALSE}
 knitr::read_chunk("chunks.R")
 ```
 
@@ -100,6 +100,7 @@ cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
 
 ## Aroma
 ```{r}
+
 
 g1=ggplot(t_format %>% filter(attribute %in% c("Aroma")))
 g1=g1+stat_summary(aes(x=reorder(beer_name, value), 
@@ -741,7 +742,7 @@ plot_grid(g1,g2,ncol=2)
 
 ```
 
-
+  
 
 
 ## Session information
