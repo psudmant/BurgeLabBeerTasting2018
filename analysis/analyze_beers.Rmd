@@ -40,9 +40,21 @@ library(ggplot2)
 library(ggrepel)
 library(RColorBrewer)
 library(cowplot)
+library(corrplot)
+
+lmp <- function (modelobject) {
+    if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+    f <- summary(modelobject)$fstatistic
+    p <- pf(f[1],f[2],f[3],lower.tail=F)
+    attributes(p) <- NULL
+    return(p)
+}
+
 
 t= read.table("../data/BurgeLabBeer.tsv", header=T, sep="\t")
-t_inf=read.table("../data/info.tsv", header=T, sep="\t")
+t_inf=read.table("../data/info.tsv", header=T, sep="\t") %>%
+        mutate(TRUE_ABV = ABV)
+
 
 t_format=t %>% gather(key="key", 
 					  value="value", 
@@ -143,17 +155,73 @@ cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
 
 ```
 
-## Taste, Aroma, Mouth Feel Correlations
-```{r fig.width=9,fig.height=3}
 
+## Perceived ABV
+```{r}
+
+g1=ggplot(t_format %>% filter(attribute %in% c("ABV")))
+g1=g1+stat_summary(aes(x=reorder(beer_name, value), 
+                   y = value, 
+                   color=(beer %in% c(1,5))), 
+               fun.data = mean_se)+
+	theme_classic(base_size=18)+
+	scale_x_discrete("")+
+	scale_y_continuous("Perceived ABV")+
+	coord_flip()+
+  theme(legend.position="none")+
+  scale_color_manual(values=colors)+
+  theme(axis.text.y=element_text(size=8))
+
+g2=ggplot(t_format %>% filter(attribute %in% c("ABV")))
+g2=g2+geom_histogram(aes(x=value),
+                 color='black')+
+	theme_classic(base_size=18)+
+  scale_y_continuous("")+
+  scale_x_continuous("")
+cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
+
+```
+
+
+
+## Taste, Aroma, Mouth Feel Correlations
+
+```{r}
 sum_t = t_format %>% 
-      group_by(attribute, beer, beer_name) %>%
+      group_by(attribute, beer, beer_name, TRUE_ABV) %>%
       summarize(mu=mean(value), sd = sd(value)/sqrt(n())) %>%
-      gather(key=estimator, value=value, -attribute, -beer, -beer_name) %>%
+      gather(key=estimator, value=value, -attribute, -beer, -beer_name, -TRUE_ABV) %>%
       mutate(attribute_est=paste(attribute,estimator,sep="_")) %>%
       ungroup() %>%
-      select(attribute_est,value,beer, beer_name) %>%
+      select(attribute_est,value,beer, beer_name, TRUE_ABV) %>%
       spread(key=attribute_est,value=value)
+
+simple_t = t_format %>% 
+  select(attribute, value, Email.Address, beer_name, TRUE_ABV, Sex) %>%
+  spread(key=attribute, value=value)
+
+#all_t_spread = t_format %>% 
+#      filter(attribute %in% c("taste")) %>%
+#      mutate(beer_attribute = paste(beer, beer_name, attribute)) %>%
+#      select(beer_attribute, value, Email.Address) %>%
+#      spread(key=beer_attribute,value=value)
+
+#M=cor(as.matrix(all_t_spread[,2:dim(all_t_spread)[2]]))
+#corrplot(M, type="upper", order="hclust", col = brewer.pal(n=9, name="Spectral"), bg="darkgreen")
+
+```
+
+
+
+```{r fig.width=9,fig.height=3}
+
+m0=lm(taste~Aroma, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(3,3),
+                    y=c(1.5,2))
 
 g1=ggplot(sum_t)
 g1=g1+geom_point(aes(x=taste_mu,y=Aroma_mu))+
@@ -170,7 +238,18 @@ g1=g1+geom_point(aes(x=taste_mu,y=Aroma_mu))+
   scale_x_continuous("Taste")+
   scale_y_continuous("Aroma")+
   coord_cartesian(ylim=c(1,5), 
-                  xlim=c(1,5))
+                  xlim=c(1,5))+
+  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
+
+
+m0=lm(taste~MF, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(3,3),
+                    y=c(1.5,2))
+
 
 g2=ggplot(sum_t)
 g2=g2+geom_point(aes(x=taste_mu,y=MF_mu))+
@@ -187,7 +266,16 @@ g2=g2+geom_point(aes(x=taste_mu,y=MF_mu))+
   scale_x_continuous("Taste")+
   scale_y_continuous("Mouth Feel")+
   coord_cartesian(ylim=c(1,5), 
-                  xlim=c(1,5))
+                  xlim=c(1,5))+
+    geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
+
+m0=lm(Aroma~MF, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(3,3),
+                    y=c(1.5,2))
 
 
 g3=ggplot(sum_t)
@@ -205,7 +293,8 @@ g3=g3+geom_point(aes(x=Aroma_mu,y=MF_mu))+
   scale_x_continuous("Aroma")+
   scale_y_continuous("Mouth Feel")+
   coord_cartesian(ylim=c(1,5), 
-                  xlim=c(1,5))
+                  xlim=c(1,5))+
+  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
 
 
 plot_grid(g1,g2,g3,rel_widths=c(.3,.3,.3), ncol=3, nrow=1)
@@ -213,8 +302,20 @@ plot_grid(g1,g2,g3,rel_widths=c(.3,.3,.3), ncol=3, nrow=1)
 
 ```
 
+
+
 ## ABV vs Taste
 ```{r fig.width=3,fig.height=3}
+
+
+m0=lm(taste~ABV, data=simple_t)
+#m1=lm(taste~TRUE_ABV, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(3,3),
+                    y=c(4.5,5))
 
 g=ggplot(sum_t)
 g=g+geom_point(aes(y=taste_mu,x=ABV_mu))+
@@ -228,12 +329,214 @@ g=g+geom_point(aes(y=taste_mu,x=ABV_mu))+
                    xend=ABV_mu+ABV_sd))+
   geom_smooth(aes(y=taste_mu,x=ABV_mu),method='lm',alpha=0,color='darkblue')+
     theme_classic()+
-  scale_x_continuous("ABV")+
+  scale_x_continuous("Perceived ABV")+
   scale_y_continuous("Taste")+
-  coord_cartesian(ylim=c(1,5))
+  coord_cartesian(ylim=c(1,5))+
+  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
 g
 ```	
 
+#Clustering by rankings
+
+## clustering of beers
+
+```{r fig.width=7, fig.height=5}
+
+##CLUSTER BEERS
+
+t_vect = t_format %>% 
+        mutate(indiv_att = paste(Email.Address, attribute)) %>%
+        select(indiv_att, value, beer, beer_name) %>%
+        mutate(value=log(value+1)) %>%
+        spread(key=indiv_att, value=value)
+
+m_vect = as.matrix(t_vect[,3:dim(t_vect)[2]])
+row.names(m_vect) = t_vect$beer_name
+
+PCA_beers = prcomp(m_vect, center=TRUE, scale=TRUE)
+PC1 = PCA_beers$sdev[1]/sum(PCA_beers$sdev)
+PC2 = PCA_beers$sdev[2]/sum(PCA_beers$sdev)
+
+pca_t = as.data.frame(PCA_beers$x)
+g=ggplot(pca_t)
+g+geom_point(aes(x=PC1,y=PC2))+
+  geom_text_repel(aes(x=PC1,y=PC2,label=rownames(pca_t)))+
+  theme_classic()+
+  scale_x_continuous(paste("PC1 (", signif(PC1*100,4), "%)", sep=""))+
+  scale_y_continuous(paste("PC2 (", signif(PC2*100,4), "%)", sep=""))
+
+```
+
+
+## clustering of people
+
+```{r fig.width=8, fig.height=3}
+
+##CLUSTER PEOPLE
+
+colors=brewer.pal(2, "Set1")
+
+t_vect_ABV = t_format %>% 
+        filter(attribute=="ABV") %>%
+        mutate(indiv_att = paste(Email.Address, attribute)) %>%
+        select(indiv_att, value, beer, beer_name) %>%
+        mutate(value=log(value+1)) %>%
+        spread(key=indiv_att, value=value)
+
+t_vect_taste = t_format %>% 
+        filter(attribute=="taste") %>%
+        mutate(indiv_att = paste(Email.Address, attribute)) %>%
+        select(indiv_att, value, beer, beer_name) %>%
+        mutate(value=log(value+1)) %>%
+        spread(key=indiv_att, value=value)
+
+t_curr = t_vect_ABV
+m_vect = as.matrix(t_curr[,3:dim(t_curr)[2]])
+row.names(m_vect) = t_curr$beer_name
+
+PCA_ppl = prcomp(t(m_vect), center=TRUE, scale=TRUE)
+PC1 = PCA_ppl$sdev[1]/sum(PCA_beers$sdev)
+PC2 = PCA_ppl$sdev[2]/sum(PCA_beers$sdev)
+
+pca_ppl_t = as.data.frame(PCA_ppl$x)
+pca_ppl_t$info = rownames(pca_ppl_t)
+pca_ppl_t = pca_ppl_t %>% separate(info, c("ID","host","attribute"),sep="@| ")
+
+g_ABV=ggplot(pca_ppl_t)
+g_ABV=g_ABV+geom_point(aes(x=PC1,y=PC2,color=attribute))+
+  geom_text_repel(aes(x=PC1,y=PC2,label=ID))+
+  theme_classic()+
+  scale_x_continuous(paste("PC1 (", signif(PC1*100,4), "%)", sep=""))+
+  scale_y_continuous(paste("PC2 (", signif(PC2*100,4), "%)", sep=""))+
+  scale_color_manual("", values=colors[1], labels="Perceived\nABV")+
+  theme(legend.position = "bottom")
+
+t_curr = t_vect_taste
+m_vect = as.matrix(t_curr[,3:dim(t_curr)[2]])
+row.names(m_vect) = t_curr$beer_name
+
+PCA_ppl = prcomp(t(m_vect), center=TRUE, scale=TRUE)
+PC1 = PCA_ppl$sdev[1]/sum(PCA_beers$sdev)
+PC2 = PCA_ppl$sdev[2]/sum(PCA_beers$sdev)
+
+pca_ppl_t = as.data.frame(PCA_ppl$x)
+pca_ppl_t$info = rownames(pca_ppl_t)
+pca_ppl_t = pca_ppl_t %>% separate(info, c("ID","host","attribute"),sep="@| ")
+
+g_taste=ggplot(pca_ppl_t)
+g_taste=g_taste+geom_point(aes(x=PC1,y=PC2,color=attribute))+
+  geom_text_repel(aes(x=PC1,y=PC2,label=ID))+
+  theme_classic()+
+  scale_x_continuous(paste("PC1 (", signif(PC1*100,4), "%)", sep=""))+
+  scale_y_continuous(paste("PC2 (", signif(PC2*100,4), "%)", sep=""))+
+  scale_color_manual("", values=colors[2], labels="Taste")+
+  theme(legend.position = "bottom")
+
+
+plot_grid(g_taste,g_ABV, ncol=2)
+
+
+```
+
+
+
+## Percieved vs True ABV
+```{r fig.width=8,fig.height=3}
+
+m0=lm(ABV~TRUE_ABV, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(3,3),
+                    y=c(1.5,2))
+
+g1=ggplot(sum_t)
+g1=g1+geom_point(aes(x=TRUE_ABV,y=ABV_mu))+
+  geom_segment(aes(x=TRUE_ABV,
+                   xend=TRUE_ABV,
+                   y=ABV_mu-ABV_sd,
+                   yend=ABV_mu+ABV_sd))+
+  geom_smooth(aes(x=TRUE_ABV,y=ABV_mu),method='lm',alpha=0,color='darkblue')+
+    theme_classic()+
+  scale_x_continuous("actual ABV")+
+  scale_y_continuous("perceived ABV")+
+  coord_cartesian(ylim=c(0,13), xlim=c(0,13))+
+  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)+
+  geom_abline(slope=1,intercept=0)
+
+g2=ggplot(t_format %>% filter(attribute %in% c("ABV")))
+g2=g2+stat_summary(aes(x=ABV, y = value, color=Sex, group=interaction(beer,Sex)), size=.2)+
+  geom_smooth(aes(x=ABV,y=value, color=Sex),method='lm',alpha=0)+
+	theme_classic()+
+	scale_color_brewer("",palette="Set1")+
+  scale_x_continuous("actual ABV")+
+  scale_y_continuous("perceived ABV")+
+	coord_cartesian(ylim=c(0,13), xlim=c(0,13))+
+  theme(legend.position=c(.2,.8))+
+  geom_abline(slope=1,intercept=0)
+
+sex_test_t = t_format %>% 
+            filter(attribute %in% c("ABV")) %>%
+            mutate(delta=value-ABV)
+t.test(value~Sex,sex_test_t)
+
+t.test(delta~Sex,sex_test_t)
+
+g3=ggplot(t_format %>% filter(attribute %in% c("ABV")))
+g3=g3+geom_violin(aes(y=value,x=Sex, fill=Sex))+
+  stat_summary(aes(y=value,x=Sex),geom="crossbar",fun.data=mean_se)+
+	theme_classic()+
+	scale_fill_brewer("",palette="Set1")+
+  scale_y_continuous("perceived ABV")+
+  theme(legend.position="None")
+
+plot_grid(g1,g2, g3, ncol=3, rel_widths = c(.4,.4,.2))
+
+```
+
+```{r fig.width=5,fig.height=3}
+
+g1=ggplot(t_format %>% filter(attribute %in% c("ABV")) %>% filter(Lab %in% c("Burge", "Li")))
+g1=g1+stat_summary(aes(x=ABV, y = value, color=Lab, group=interaction(beer,Lab)), size=.2)+
+  geom_smooth(aes(x=ABV,y=value, color=Lab),method='lm',alpha=0)+
+	theme_classic()+
+	scale_color_brewer("",palette="Set1")+
+  scale_x_continuous("actual ABV")+
+  scale_y_continuous("perceived ABV")+
+	coord_cartesian(ylim=c(0,13), xlim=c(0,13))+
+  theme(legend.position=c(.2,.8))+
+  geom_abline(slope=1,intercept=0)
+g1
+
+g2=ggplot(t_format %>% filter(attribute %in% c("ABV")) %>% filter(Lab %in% c("Burge", "Li")))
+g2=g2+geom_violin(aes(y=value,x=Lab, fill=Lab))+
+  stat_summary(aes(y=value,x=Lab),geom="crossbar",fun.data=mean_se)+
+	theme_classic()+
+	scale_fill_brewer("",palette="Set1")+
+  scale_y_continuous("perceived ABV")+
+  theme(legend.position="None")
+
+
+# t_pie = t_format %>% 
+#   filter(Lab %in% c("Burge", "Li")) %>%
+#   select(Email.Address, Sex, Lab) %>%
+#   unique() %>%
+#   group_by(Sex,Lab)
+# 
+# g3=ggplot(t_pie)
+# g3=g3+geom_bar(aes(x=Lab, fill=Sex), position="dodge",width=.3)+
+#   theme_classic()+
+#   scale_fill_brewer(palette="Set1")+
+#   theme(legend.position = "none")
+# 
+# plot_grid(g1,g2,g3, ncol=3, rel_widths = c(.6,.2,.2))
+
+
+
+```
+# Male vs Female preferences
+```{r fig.width=9, fig.height=4}
 
 t_sum = t_format %>% 
 		group_by(Sex,attribute, beer_name) %>%
@@ -245,8 +548,8 @@ t_sum_line = t_sum %>%
 				spread(key=Sex, value=mu) %>%
 				mutate(sex_col=ifelse(Female>Male,"Female","Male"))
 
-g=ggplot(t_sum %>% filter(attribute %in% c("taste")))
-g+geom_segment(aes(y=Male, 
+g1=ggplot(t_sum %>% filter(attribute %in% c("taste")))
+g1=g1+geom_segment(aes(y=Male, 
 				 yend=Female, 
 				 x=reorder(beer_name, min_val), 
 				 xend=reorder(beer_name, min_val),
@@ -261,20 +564,16 @@ g+geom_segment(aes(y=Male,
 				 geom="point",
 				 size=2)+
 	theme_classic()+
-	scale_color_brewer(palette="Set1")+
+	scale_color_brewer("",palette="Set1")+
 	coord_cartesian(ylim=c(1,5))+
 	scale_x_discrete("")+
-	coord_flip()
+  scale_y_continuous("Taste")+
+	coord_flip()+
+  theme(legend.position="bottom")
 
-g=ggplot(t_format %>% filter(attribute %in% c("Aroma")))
-g+stat_summary(aes(x=reorder(beer_name, value), y = value))+
-	theme_classic()+
-	scale_x_discrete("")+
-	scale_y_continuous("Aroma")+
-	coord_flip(ylim=c(1,5))
 
-g=ggplot(t_sum %>% filter(attribute %in% c("Aroma")))
-g+geom_segment(aes(y=Male, 
+g2=ggplot(t_sum %>% filter(attribute %in% c("Aroma")))
+g2=g2+geom_segment(aes(y=Male, 
 				 yend=Female, 
 				 x=reorder(beer_name, min_val), 
 				 xend=reorder(beer_name, min_val),
@@ -289,21 +588,16 @@ g+geom_segment(aes(y=Male,
 				 geom="point",
 				 size=2)+
 	theme_classic()+
-	scale_color_brewer(palette="Set1")+
+	scale_color_brewer("",palette="Set1")+
 	coord_cartesian(ylim=c(1,5))+
 	scale_x_discrete("")+
-	coord_flip()
+  scale_y_continuous("Aroma")+
+	coord_flip()+
+  theme(legend.position="bottom")
 
 
-g=ggplot(t_format %>% filter(attribute %in% c("MF")))
-g+stat_summary(aes(x=reorder(beer_name, value), y = value))+
-	theme_classic()+
-	scale_x_discrete("")+
-	scale_y_continuous("Mouth Feel")+	
-	coord_flip(ylim=c(1,5))
-
-g=ggplot(t_sum %>% filter(attribute %in% c("MF")))
-g+geom_segment(aes(y=Male, 
+g3=ggplot(t_sum %>% filter(attribute %in% c("MF")))
+g3=g3+geom_segment(aes(y=Male, 
 				 yend=Female, 
 				 x=reorder(beer_name, min_val), 
 				 xend=reorder(beer_name, min_val),
@@ -318,110 +612,79 @@ g+geom_segment(aes(y=Male,
 				 geom="point",
 				 size=2)+
 	theme_classic()+
-	scale_color_brewer(palette="Set1")+
+	scale_color_brewer("",palette="Set1")+
 	coord_cartesian(ylim=c(1,5))+
 	scale_x_discrete("")+
-	coord_flip()
+  scale_y_continuous("Mouth Feel")+
+	coord_flip()+
+  theme(legend.position="bottom")
 
 
-t_sum = t_format
-t_format$BAscore
+plot_grid(g1,g2,g3,ncol=3)
+
+
+
+```
+
+
+# Comparison to external factors
+
+```{r fig.width=3,fig.height=3}
+
+m0=lm(BAscore~value, data=t_format %>% filter(attribute %in% c("taste")))
+#m1=lm(taste~TRUE_ABV, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(1,1),
+                    y=c(4.5,5))
+
 g=ggplot(t_format %>% filter(attribute %in% c("taste")))
-g+stat_summary(aes(x=BAscore, y = value, color=attribute, group=beer))+
+g+stat_summary(aes(x=BAscore, y = value, group=beer), color='black')+
+  geom_smooth(aes(x=BAscore, y = value), color='darkblue', alpha=0, method='lm')+
 	theme_classic()+
 	scale_color_brewer(palette="Set1")+
 	scale_x_continuous("Beer Advocate Score")+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))+
+  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
 
-g=ggplot(t_format %>% filter(attribute %in% c("taste")))
-g+stat_summary(aes(x=ABV, y = value, color=attribute, group=beer))+
-	theme_classic()+
-	scale_color_brewer(palette="Set1")+
-	scale_x_continuous("ABV")
+```
 
 
-g=ggplot(t_format %>% filter(attribute %in% c("ABV")))
-g+stat_summary(aes(x=ABV, y = value, color=attribute, group=beer))+
-	theme_classic()+
-	scale_color_brewer(palette="Set1")+
-	geom_abline(slope=1, intercept=0)+
-	coord_cartesian(ylim=c(0,13), xlim=c(0,13))
-	
-g=ggplot(t_format %>% filter(attribute %in% c("ABV")))
-g+stat_summary(aes(x=ABV, y = value, color=Sex, group=interaction(beer,Sex)))+
-	theme_classic()+
-	scale_color_brewer(palette="Set1")+
-	geom_abline(slope=1, intercept=0)+
-	coord_cartesian(ylim=c(0,13), xlim=c(0,13))
-	
-g=ggplot(t_format %>% filter(attribute %in% c("ABV")) %>% filter(Lab %in% c("Burge", "Li")))
-g+stat_summary(aes(x=ABV, y = value, color=Lab, group=interaction(beer,Lab)))+
-	theme_classic()+
-	scale_color_brewer(palette="Set2")+
-	geom_abline(slope=1, intercept=0)+
-	coord_cartesian(ylim=c(0,13), xlim=c(0,13))
-	
+## Burge vs Li Lab Preferences
+```{r fig.width=8, fig.height=4}
 
 lab_sum = t_format %>% filter(Lab %in% c("Burge", "Li")) %>%
-	group_by(Lab, attribute, beer) %>%
+	group_by(Lab, attribute, beer_name, beer) %>%
 	summarize(mu = mean(value), sd = sd(value)) %>%
 	mutate(lab_attribute = interaction(Lab, attribute)) %>%
 	ungroup() %>%
-	select(lab_attribute, mu, beer)
+	select(lab_attribute, mu, beer_name, beer)
 
 spread_data = lab_sum %>% spread(key=lab_attribute, value=mu)
 
 ##Beers Li lab liked, we didn't
-g=ggplot(spread_data)
-g+geom_point(aes(x=Burge.taste, y=Li.taste))+
+g1=ggplot(spread_data)
+g1=g1+geom_point(aes(x=Burge.taste, y=Li.taste))+
 	geom_text_repel(aes(x=Burge.taste, y=Li.taste, label=beer))+
 	theme_classic()+
 	coord_cartesian(ylim=c(1,5), xlim=c(1,5))+
 	geom_abline(slope=1,intersect=0)
-	
-	##
 
-g=ggplot(spread_data)
-g+geom_point(aes(x=Burge.Aroma, y=Li.Aroma))+
+g2=ggplot(spread_data)
+g2=g2+geom_point(aes(x=Burge.taste, y=Li.taste))+
+	geom_text_repel(aes(x=Burge.taste, y=Li.taste, label=beer_name))+
 	theme_classic()+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))+
+	geom_abline(slope=1,intersect=0)
 
-g=ggplot(spread_data)
-g+geom_point(aes(x=Burge.MF, y=Li.MF))+
-	theme_classic()+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
-
-g=ggplot(spread_data)
-g+geom_point(aes(x=Li.taste, y=Li.MF))+
-	theme_classic()+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
-
-g=ggplot(spread_data)
-g+geom_point(aes(x=Li.taste, y=Li.Aroma))+
-	theme_classic()+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
-
-g=ggplot(spread_data)
-g+geom_point(aes(x=Li.MF, y=Li.Aroma))+
-	theme_classic()+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))
+plot_grid(g1,g2,ncol=2)
 
 
-Li
+```
 
 
-### Fix so just Burge and Li
-### compare 
-
-## compare Burge v li
-	
-	
-	
-	
-	
-	
-	
-	
 
 
 ## Session information

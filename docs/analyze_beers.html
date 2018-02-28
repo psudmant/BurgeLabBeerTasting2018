@@ -329,10 +329,10 @@ knitr::opts_chunk$set(
   fig.path = paste0(&quot;figure/&quot;, knitr::current_input(), &quot;/&quot;)
 )</code></pre>
 <!-- Insert the date the file was last updated -->
-<p><strong>Last updated:</strong> 2018-02-27</p>
+<p><strong>Last updated:</strong> 2018-02-28</p>
 <!-- Insert the code version (Git commit SHA1) if Git repository exists and R
  package git2r is installed -->
-<p><strong>Code version:</strong> f5489c5</p>
+<p><strong>Code version:</strong> 8f277e3</p>
 <p>The code below loads and analyzes the Burge Lab 2018 Porter Tasting Night Results</p>
 <div id="overallpreferences-among-beers" class="section level1">
 <h1>OverallPreferences Among Beers</h1>
@@ -348,48 +348,63 @@ knitr::opts_chunk$set(
 <h2>Mouth Feel</h2>
 <p><img src="figure/analyze_beers.Rmd/unnamed-chunk-4-1.png" width="576" style="display: block; margin: auto;" /></p>
 </div>
+<div id="perceived-abv" class="section level2">
+<h2>Perceived ABV</h2>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-5-1.png" width="576" style="display: block; margin: auto;" /></p>
+</div>
 <div id="taste-aroma-mouth-feel-correlations" class="section level2">
 <h2>Taste, Aroma, Mouth Feel Correlations</h2>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-5-1.png" width="864" style="display: block; margin: auto;" /></p>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-7-1.png" width="864" style="display: block; margin: auto;" /></p>
 </div>
 <div id="abv-vs-taste" class="section level2">
 <h2>ABV vs Taste</h2>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-6-1.png" width="288" style="display: block; margin: auto;" /></p>
-<p>t_sum = t_format %&gt;% group_by(Sex,attribute, beer_name) %&gt;% summarize(mu = mean(value)) %&gt;% group_by(beer_name, attribute) %&gt;% mutate(min_val=min(mu))</p>
-<p>t_sum_line = t_sum %&gt;% spread(key=Sex, value=mu) %&gt;% mutate(sex_col=ifelse(Female&gt;Male,“Female”,“Male”))</p>
-<p>g=ggplot(t_sum %&gt;% filter(attribute %in% c(“taste”))) g+geom_segment(aes(y=Male, yend=Female, x=reorder(beer_name, min_val), xend=reorder(beer_name, min_val), color=sex_col), data=t_sum_line %&gt;% filter(attribute %in% c(“taste”)), size=1.2)+ stat_summary(aes(x=reorder(beer_name, min_val), y = mu, color=Sex), fun.y=mean, geom=“point”, size=2)+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ coord_cartesian(ylim=c(1,5))+ scale_x_discrete(“”)+ coord_flip()</p>
-<p>g=ggplot(t_format %&gt;% filter(attribute %in% c(“Aroma”))) g+stat_summary(aes(x=reorder(beer_name, value), y = value))+ theme_classic()+ scale_x_discrete(“”)+ scale_y_continuous(“Aroma”)+ coord_flip(ylim=c(1,5))</p>
-<p>g=ggplot(t_sum %&gt;% filter(attribute %in% c(“Aroma”))) g+geom_segment(aes(y=Male, yend=Female, x=reorder(beer_name, min_val), xend=reorder(beer_name, min_val), color=sex_col), data=t_sum_line %&gt;% filter(attribute %in% c(“Aroma”)), size=1.2)+ stat_summary(aes(x=reorder(beer_name, min_val), y = mu, color=Sex), fun.y=mean, geom=“point”, size=2)+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ coord_cartesian(ylim=c(1,5))+ scale_x_discrete(“”)+ coord_flip()</p>
-<p>g=ggplot(t_format %&gt;% filter(attribute %in% c(“MF”))) g+stat_summary(aes(x=reorder(beer_name, value), y = value))+ theme_classic()+ scale_x_discrete(“”)+ scale_y_continuous(“Mouth Feel”)+<br />
-coord_flip(ylim=c(1,5))</p>
-<p>g=ggplot(t_sum %&gt;% filter(attribute %in% c(“MF”))) g+geom_segment(aes(y=Male, yend=Female, x=reorder(beer_name, min_val), xend=reorder(beer_name, min_val), color=sex_col), data=t_sum_line %&gt;% filter(attribute %in% c(“MF”)), size=1.2)+ stat_summary(aes(x=reorder(beer_name, min_val), y = mu, color=Sex), fun.y=mean, geom=“point”, size=2)+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ coord_cartesian(ylim=c(1,5))+ scale_x_discrete(“”)+ coord_flip()</p>
-<p>t_sum = t_format t_format$BAscore g=ggplot(t_format %&gt;% filter(attribute %in% c(“taste”))) g+stat_summary(aes(x=BAscore, y = value, color=attribute, group=beer))+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ scale_x_continuous(“Beer Advocate Score”)+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))</p>
-<p>g=ggplot(t_format %&gt;% filter(attribute %in% c(“taste”))) g+stat_summary(aes(x=ABV, y = value, color=attribute, group=beer))+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ scale_x_continuous(“ABV”)</p>
-<p>g=ggplot(t_format %&gt;% filter(attribute %in% c(“ABV”))) g+stat_summary(aes(x=ABV, y = value, color=attribute, group=beer))+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ geom_abline(slope=1, intercept=0)+ coord_cartesian(ylim=c(0,13), xlim=c(0,13))</p>
-<p>g=ggplot(t_format %&gt;% filter(attribute %in% c(“ABV”))) g+stat_summary(aes(x=ABV, y = value, color=Sex, group=interaction(beer,Sex)))+ theme_classic()+ scale_color_brewer(palette=“Set1”)+ geom_abline(slope=1, intercept=0)+ coord_cartesian(ylim=c(0,13), xlim=c(0,13))</p>
-<p>g=ggplot(t_format %&gt;% filter(attribute %in% c(“ABV”)) %&gt;% filter(Lab %in% c(“Burge”, “Li”))) g+stat_summary(aes(x=ABV, y = value, color=Lab, group=interaction(beer,Lab)))+ theme_classic()+ scale_color_brewer(palette=“Set2”)+ geom_abline(slope=1, intercept=0)+ coord_cartesian(ylim=c(0,13), xlim=c(0,13))</p>
-<p>lab_sum = t_format %&gt;% filter(Lab %in% c(“Burge”, “Li”)) %&gt;% group_by(Lab, attribute, beer) %&gt;% summarize(mu = mean(value), sd = sd(value)) %&gt;% mutate(lab_attribute = interaction(Lab, attribute)) %&gt;% ungroup() %&gt;% select(lab_attribute, mu, beer)</p>
-<p>spread_data = lab_sum %&gt;% spread(key=lab_attribute, value=mu)</p>
-</div>
-<div id="beers-li-lab-liked-we-didnt" class="section level2">
-<h2>Beers Li lab liked, we didn’t</h2>
-<p>g=ggplot(spread_data) g+geom_point(aes(x=Burge.taste, y=Li.taste))+ geom_text_repel(aes(x=Burge.taste, y=Li.taste, label=beer))+ theme_classic()+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))+ geom_abline(slope=1,intersect=0)</p>
-<pre><code>##</code></pre>
-<p>g=ggplot(spread_data) g+geom_point(aes(x=Burge.Aroma, y=Li.Aroma))+ theme_classic()+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))</p>
-<p>g=ggplot(spread_data) g+geom_point(aes(x=Burge.MF, y=Li.MF))+ theme_classic()+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))</p>
-<p>g=ggplot(spread_data) g+geom_point(aes(x=Li.taste, y=Li.MF))+ theme_classic()+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))</p>
-<p>g=ggplot(spread_data) g+geom_point(aes(x=Li.taste, y=Li.Aroma))+ theme_classic()+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))</p>
-<p>g=ggplot(spread_data) g+geom_point(aes(x=Li.MF, y=Li.Aroma))+ theme_classic()+ coord_cartesian(ylim=c(1,5), xlim=c(1,5))</p>
-<p>Li</p>
-<div id="fix-so-just-burge-and-li" class="section level3">
-<h3>Fix so just Burge and Li</h3>
-</div>
-<div id="compare" class="section level3">
-<h3>compare</h3>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-8-1.png" width="288" style="display: block; margin: auto;" /></p>
 </div>
 </div>
-<div id="compare-burge-v-li" class="section level2">
-<h2>compare Burge v li</h2>
+<div id="clustering-by-rankings" class="section level1">
+<h1>Clustering by rankings</h1>
+<div id="clustering-of-beers" class="section level2">
+<h2>clustering of beers</h2>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-9-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="clustering-of-people" class="section level2">
+<h2>clustering of people</h2>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-10-1.png" width="768" style="display: block; margin: auto;" /></p>
+</div>
+<div id="percieved-vs-true-abv" class="section level2">
+<h2>Percieved vs True ABV</h2>
+<pre><code>
+    Welch Two Sample t-test
+
+data:  value by Sex
+t = -1.0138, df = 86.039, p-value = 0.3135
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ -0.9896266  0.3211742
+sample estimates:
+mean in group Female   mean in group Male 
+            5.801190             6.135417 </code></pre>
+<pre><code>
+    Welch Two Sample t-test
+
+data:  delta by Sex
+t = -0.76436, df = 96.208, p-value = 0.4465
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ -1.2021610  0.5337087
+sample estimates:
+mean in group Female   mean in group Male 
+          -0.7404762           -0.4062500 </code></pre>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-11-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-12-1.png" width="480" style="display: block; margin: auto;" /> # Male vs Female preferences <img src="figure/analyze_beers.Rmd/unnamed-chunk-13-1.png" width="864" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="comparison-to-external-factors" class="section level1">
+<h1>Comparison to external factors</h1>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-14-1.png" width="288" style="display: block; margin: auto;" /></p>
+<div id="burge-vs-li-lab-preferences" class="section level2">
+<h2>Burge vs Li Lab Preferences</h2>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-15-1.png" width="768" style="display: block; margin: auto;" /></p>
 </div>
 <div id="session-information" class="section level2">
 <h2>Session information</h2>
@@ -409,9 +424,9 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] bindrcpp_0.2       cowplot_0.8.0      RColorBrewer_1.1-2
-[4] ggrepel_0.7.0      ggplot2_2.2.1      broom_0.4.2       
-[7] tidyr_0.7.1        dplyr_0.7.4       
+[1] bindrcpp_0.2       corrplot_0.84      cowplot_0.8.0     
+[4] RColorBrewer_1.1-2 ggrepel_0.7.0      ggplot2_2.2.1     
+[7] broom_0.4.2        tidyr_0.7.1        dplyr_0.7.4       
 
 loaded via a namespace (and not attached):
  [1] Rcpp_0.12.13     compiler_3.4.0   git2r_0.21.0     plyr_1.8.4      
