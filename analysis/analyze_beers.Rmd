@@ -2,14 +2,13 @@
 title: "Analysis of Burge Lab Porter Tasting"
 author: "Peter Sudmant"
 date: '2018-02-27'
-output:
-  pdf_document: default
-  html_document: default
+output: html_document
+  
 ---
 
 <!-- The file analysis/chunks.R contains chunks that define default settings
 shared across the workflowr files. -->
-```{r read-chunk, include=TRUE, cache=FALSE}
+```{r read-chunk, include=FALSE, cache=FALSE}
 knitr::read_chunk("chunks.R")
 ```
 
@@ -32,7 +31,8 @@ knitr::read_chunk("chunks.R")
 ```{r code-version, echo=FALSE, results='asis'}
 ```
 
-The code below loads and analyzes the Burge Lab 2018 Porter Tasting Night Results
+<!-- Add your analysis here -->
+
 
 ```{r}
 library(dplyr)
@@ -464,7 +464,7 @@ plot_grid(g_taste,g_ABV, ncol=2)
 
 
 
-# Mayflower Porter #1 vs Mayflower Porter #9
+# Mayflower Porter #1 vs #9
 ## Overall Consistency 
 
 ```{r fig.width=8, fig.height=3}
