@@ -320,19 +320,11 @@ div.section {
 <!-- The file analysis/chunks.R contains chunks that define default settings
 shared across the workflowr files. -->
 <!-- Update knitr chunk options -->
-<pre class="r"><code># Update knitr chunk options
-# https://yihui.name/knitr/options/#chunk-options
-knitr::opts_chunk$set(
-  comment = NA,
-  fig.align = &quot;center&quot;,
-  tidy = FALSE,
-  fig.path = paste0(&quot;figure/&quot;, knitr::current_input(), &quot;/&quot;)
-)</code></pre>
 <!-- Insert the date the file was last updated -->
 <p><strong>Last updated:</strong> 2018-02-28</p>
 <!-- Insert the code version (Git commit SHA1) if Git repository exists and R
  package git2r is installed -->
-<p><strong>Code version:</strong> 0333916</p>
+<p><strong>Code version:</strong> 17caf06</p>
 <p>The code below loads and analyzes the Burge Lab 2018 Porter Tasting Night Results</p>
 <div id="overallpreferences-among-beers" class="section level1">
 <h1>OverallPreferences Among Beers</h1>
@@ -360,19 +352,25 @@ knitr::opts_chunk$set(
 <h2>ABV vs Taste</h2>
 <p><img src="figure/analyze_beers.Rmd/unnamed-chunk-8-1.png" width="288" style="display: block; margin: auto;" /></p>
 </div>
+<div id="comparison-to-other-rankings" class="section level2">
+<h2>Comparison to other rankings</h2>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-9-1.png" width="288" style="display: block; margin: auto;" /></p>
 </div>
-<div id="clustering-by-rankings" class="section level1">
-<h1>Clustering by rankings</h1>
+</div>
+<div id="clustering" class="section level1">
+<h1>Clustering</h1>
 <div id="clustering-of-beers" class="section level2">
 <h2>clustering of beers</h2>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-9-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-10-1.png" width="672" style="display: block; margin: auto;" /></p>
 </div>
 <div id="clustering-of-people" class="section level2">
 <h2>clustering of people</h2>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-10-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-11-1.png" width="768" style="display: block; margin: auto;" /></p>
 </div>
-<div id="percieved-vs-true-abv" class="section level2">
-<h2>Percieved vs True ABV</h2>
+</div>
+<div id="percieved-vs-true-abv" class="section level1">
+<h1>Percieved vs True ABV</h1>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-12-1.png" width="768" style="display: block; margin: auto;" /></p>
 <pre><code>
     Welch Two Sample t-test
 
@@ -385,23 +383,19 @@ sample estimates:
 mean in group Female   mean in group Male 
             5.801190             6.135417 </code></pre>
 <pre><code>
-    Welch Two Sample t-test
+    Wilcoxon rank sum test with continuity correction
 
-data:  delta by Sex
-t = -0.76436, df = 96.208, p-value = 0.4465
-alternative hypothesis: true difference in means is not equal to 0
-95 percent confidence interval:
- -1.2021610  0.5337087
-sample estimates:
-mean in group Female   mean in group Male 
-          -0.7404762           -0.4062500 </code></pre>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-11-1.png" width="768" style="display: block; margin: auto;" /></p>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-12-1.png" width="480" style="display: block; margin: auto;" /> # Male vs Female preferences <img src="figure/analyze_beers.Rmd/unnamed-chunk-13-1.png" width="960" style="display: block; margin: auto;" /></p>
+data:  value by Sex
+W = 1715.5, p-value = 0.1514
+alternative hypothesis: true location shift is not equal to 0</code></pre>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-13-1.png" width="480" style="display: block; margin: auto;" /></p>
 </div>
+<div id="male-vs-female-preferences" class="section level1">
+<h1>Male vs Female preferences</h1>
+<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-14-1.png" width="960" style="display: block; margin: auto;" /></p>
 </div>
-<div id="comparison-to-external-factors" class="section level1">
-<h1>Comparison to external factors</h1>
-<p><img src="figure/analyze_beers.Rmd/unnamed-chunk-14-1.png" width="288" style="display: block; margin: auto;" /></p>
+<div id="inter-lab-beer-preferences" class="section level1">
+<h1>Inter-Lab Beer Preferences</h1>
 <div id="burge-vs-li-lab-preferences" class="section level2">
 <h2>Burge vs Li Lab Preferences</h2>
 <p><img src="figure/analyze_beers.Rmd/unnamed-chunk-15-1.png" width="768" style="display: block; margin: auto;" /></p>

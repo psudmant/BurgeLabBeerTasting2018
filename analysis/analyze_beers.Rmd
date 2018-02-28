@@ -1,8 +1,11 @@
 ---
-title: "Analyze Burge Lab Porter Tasting"
+title: "Analysis of Burge Lab Porter Tasting"
 author: "Peter Sudmant"
-date: 2018-02-27
-output: html_document
+date: '2018-02-27'
+output:
+  pdf_document: default
+  html_document: default
+classoption: landscape
 ---
 
 <!-- The file analysis/chunks.R contains chunks that define default settings
@@ -12,7 +15,7 @@ knitr::read_chunk("chunks.R")
 ```
 
 <!-- Update knitr chunk options -->
-```{r knitr-opts-chunk, include=TRUE}
+```{r knitr-opts-chunk, include=FALSE}
 ```
 
 ```{r package_options, include=FALSE}
@@ -184,6 +187,7 @@ cowplot::plot_grid(g1,g2,rel_widths=c(.8,.5), rel_heights=c(1,.5),nrow=1,ncol=2)
 
 
 
+
 ## Taste, Aroma, Mouth Feel Correlations
 
 ```{r}
@@ -336,7 +340,33 @@ g=g+geom_point(aes(y=taste_mu,x=ABV_mu))+
 g
 ```	
 
-#Clustering by rankings
+
+## Comparison to other rankings
+
+```{r fig.width=3,fig.height=3}
+
+m0=lm(BAscore~value, data=t_format %>% filter(attribute %in% c("taste")))
+#m1=lm(taste~TRUE_ABV, data=simple_t)
+p_val = summary(m0)$coefficients[2,4]
+corr = summary(m0)$r.squared
+labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
+                             paste("R==", signif(corr,2), sep="")),
+                    x=c(1,1),
+                    y=c(4.5,5))
+
+g=ggplot(t_format %>% filter(attribute %in% c("taste")))
+g+stat_summary(aes(x=BAscore, y = value, group=beer), color='black')+
+  geom_smooth(aes(x=BAscore, y = value), color='darkblue', alpha=0, method='lm')+
+	theme_classic()+
+	scale_color_brewer(palette="Set1")+
+	scale_x_continuous("Beer Advocate Score")+
+  scale_y_continuous("Beer Tasting Score")+
+	coord_cartesian(ylim=c(1,5), xlim=c(1,5))+
+  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
+
+```
+
+#Clustering
 
 ## clustering of beers
 
@@ -440,7 +470,7 @@ plot_grid(g_taste,g_ABV, ncol=2)
 
 
 
-## Percieved vs True ABV
+# Percieved vs True ABV
 ```{r fig.width=8,fig.height=3}
 
 m0=lm(ABV~TRUE_ABV, data=simple_t)
@@ -449,7 +479,7 @@ corr = summary(m0)$r.squared
 labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
                              paste("R==", signif(corr,2), sep="")),
                     x=c(3,3),
-                    y=c(1.5,2))
+                    y=c(1,2))
 
 g1=ggplot(sum_t)
 g1=g1+geom_point(aes(x=TRUE_ABV,y=ABV_mu))+
@@ -476,12 +506,6 @@ g2=g2+stat_summary(aes(x=ABV, y = value, color=Sex, group=interaction(beer,Sex))
   theme(legend.position=c(.2,.8))+
   geom_abline(slope=1,intercept=0)
 
-sex_test_t = t_format %>% 
-            filter(attribute %in% c("ABV")) %>%
-            mutate(delta=value-ABV)
-t.test(value~Sex,sex_test_t)
-
-t.test(delta~Sex,sex_test_t)
 
 g3=ggplot(t_format %>% filter(attribute %in% c("ABV")))
 g3=g3+geom_violin(aes(y=value,x=Sex, fill=Sex))+
@@ -492,6 +516,17 @@ g3=g3+geom_violin(aes(y=value,x=Sex, fill=Sex))+
   theme(legend.position="None")
 
 plot_grid(g1,g2, g3, ncol=3, rel_widths = c(.4,.4,.2))
+
+
+
+sex_test_t = t_format %>% 
+            filter(attribute %in% c("ABV")) %>%
+            mutate(delta=value-ABV)
+
+t.test(value~Sex,sex_test_t)
+wilcox.test(value~Sex,sex_test_t)
+#t.test(delta~Sex,sex_test_t)
+#wilcox.test(delta~Sex,sex_test_t)
 
 ```
 
@@ -535,7 +570,11 @@ g2=g2+geom_violin(aes(y=value,x=Lab, fill=Lab))+
 
 
 ```
+
+
 # Male vs Female preferences
+
+
 ```{r fig.width=10, fig.height=4}
 
 t_sum = t_format %>% 
@@ -627,31 +666,7 @@ plot_grid(g1,g2,g3,ncol=3)
 ```
 
 
-# Comparison to external factors
-
-```{r fig.width=3,fig.height=3}
-
-m0=lm(BAscore~value, data=t_format %>% filter(attribute %in% c("taste")))
-#m1=lm(taste~TRUE_ABV, data=simple_t)
-p_val = summary(m0)$coefficients[2,4]
-corr = summary(m0)$r.squared
-labels = data.frame(labels=c(paste("P==", signif(p_val,2), sep=""),
-                             paste("R==", signif(corr,2), sep="")),
-                    x=c(1,1),
-                    y=c(4.5,5))
-
-g=ggplot(t_format %>% filter(attribute %in% c("taste")))
-g+stat_summary(aes(x=BAscore, y = value, group=beer), color='black')+
-  geom_smooth(aes(x=BAscore, y = value), color='darkblue', alpha=0, method='lm')+
-	theme_classic()+
-	scale_color_brewer(palette="Set1")+
-	scale_x_continuous("Beer Advocate Score")+
-	coord_cartesian(ylim=c(1,5), xlim=c(1,5))+
-  geom_text(aes(x=x,y=y,label=labels), parse=TRUE, data=labels, hjust=0)
-
-```
-
-
+#Inter-Lab Beer Preferences
 ## Burge vs Li Lab Preferences
 ```{r fig.width=8, fig.height=4}
 
