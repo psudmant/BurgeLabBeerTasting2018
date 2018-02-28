@@ -3,9 +3,8 @@ title: "Analysis of Burge Lab Porter Tasting"
 author: "Peter Sudmant"
 date: '2018-02-27'
 output:
-  pdf_document: default
   html_document: default
-classoption: landscape
+  pdf_document: default
 ---
 
 <!-- The file analysis/chunks.R contains chunks that define default settings
@@ -45,14 +44,6 @@ library(RColorBrewer)
 library(cowplot)
 library(corrplot)
 
-lmp <- function (modelobject) {
-    if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-    f <- summary(modelobject)$fstatistic
-    p <- pf(f[1],f[2],f[3],lower.tail=F)
-    attributes(p) <- NULL
-    return(p)
-}
-
 
 t= read.table("../data/BurgeLabBeer.tsv", header=T, sep="\t")
 t_inf=read.table("../data/info.tsv", header=T, sep="\t") %>%
@@ -75,6 +66,8 @@ t_format=t %>% gather(key="key",
 t_format = inner_join(t_format, t_inf, by="beer")
 t_format = t_format %>% 
             mutate(beer_name = paste(Brewery, "\n", beer_name, " (", beer, ")", sep=""))
+
+dim(t_format)
 ```
 
 # OverallPreferences Among Beers
@@ -467,6 +460,55 @@ plot_grid(g_taste,g_ABV, ncol=2)
 
 
 ```
+
+
+
+# Mayflower Porter #1 vs Mayflower Porter #9
+## Overall Consistency 
+
+```{r fig.width=8, fig.height=3}
+
+data = t_format %>% 
+  filter(beer %in% c(1,9)) %>%
+  separate(Email.Address, c("ID","address"), sep="@") %>%
+  select(ID, Sex, attribute, value, beer) %>%
+  mutate(beer = paste("beer",beer, sep="")) %>%
+  select(beer, ID, Sex, value, attribute) %>%
+  spread(key=beer, value=value) %>%
+  mutate(delta=beer1-beer9)
+
+
+g2=ggplot(data)
+g2=g2+geom_histogram(aes(x=delta, fill=attribute),bins=12)+
+  geom_vline(xintercept = 0,linetype=2)+
+	theme_classic(base_size=18)+
+  facet_wrap(~attribute, nrow=1)+
+  scale_x_continuous("change from first taste to second taste")+
+  theme(legend.position="none")+
+  scale_fill_brewer(palette="Set1")
+
+g2
+
+
+```
+
+## Individual Ranking Consistency
+```{r fig.width=8, fig.height=3}
+
+g1=ggplot(data)
+g1=g1+geom_segment(aes(x=0, xend=delta, y=ID, yend=ID, color=attribute))+
+  geom_point(aes(x=delta, y=ID, color=attribute))+
+	theme_classic(base_size=18)+
+  facet_wrap(~attribute, nrow=1)+
+  theme(legend.position="none")+
+  scale_color_brewer(palette="Set1")+
+  scale_x_continuous("change from first taste to second taste",lim=c(-3,3))+
+  scale_y_discrete("")
+
+g1
+
+```
+
 
 
 
