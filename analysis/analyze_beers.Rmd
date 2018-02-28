@@ -536,7 +536,7 @@ g2=g2+geom_violin(aes(y=value,x=Lab, fill=Lab))+
 
 ```
 # Male vs Female preferences
-```{r fig.width=9, fig.height=4}
+```{r fig.width=10, fig.height=4}
 
 t_sum = t_format %>% 
 		group_by(Sex,attribute, beer_name) %>%
